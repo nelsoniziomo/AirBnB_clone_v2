@@ -1,52 +1,35 @@
 #!/usr/bin/python3
-"""Deploy web static package
-"""
-from fabric.api import *
-from datetime import datetime
-from os import path
+#  Fabric script that generates a .tgz archive from the
+# contents of the web_static folder of your AirBnB Clone repo
+# using the function do_pack
+import os
+from fabric.api import run, put, env
 
-env.hosts = ['52.87.219.241', '54.242.162.151']
-env.user = 'ubuntu'
-env.key_filename = '~/.ssh/id_rsa'
+env.hosts = ['44.192.38.3', '3.239.82.120']
+env.user = "ubuntu"
+
 
 def do_deploy(archive_path):
-    """Deploy web files to server
-    """
-    if not path.exists(archive_path):
+    """Create a tar gzipped archive of the directory web_static."""
+    if os.path.exists(archive_path) is False:
         return False
-
-    filename = archive_path.split("/")[-1]
-    name = filename.split(".")[0]
-
-    with settings(abort_exception=Exception):
+    else:
         try:
-            # upload archive
             put(archive_path, "/tmp/")
-
-            # create target dir
-            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            run(f"sudo mkdir -p /data/web_static/releases/{name}/")
-
-            # uncompress archive and delete .tgz
-            run(f"sudo tar -xzf /tmp/{filename} -C /data/web_static/releases/{name}/")
-
-            # remove archive
-            run(f"sudo rm /tmp/{filename}")
-
-            # move contents into host web_static
-            run(f"sudo mv /data/web_static/releases/{name}/web_static/* /data/web_static/releases/{name}/")
-
-            # remove extraneous web_static dir
-            run(f"sudo rm -rf /data/web_static/releases/{name}/web_static")
-
-            # delete pre-existing sym link
-            if run("sudo test -L /data/web_static/current").succeeded:
-                run("sudo rm /data/web_static/current")
-
-            # re-establish symbolic link
-            run(f"sudo ln -s /data/web_static/releases/{name}/ /data/web_static/current")
-        except Exception as e:
-            print(f"Exception: {e}")
+            """ putting the file to .tgz """
+            file_name = archive_path.split("/")[1]
+            """ splitting .tgz """
+            file_name2 = file_name.split(".")[0]
+            """ spliting archivo """
+            final_name = "/data/web_static/releases/" + file_name2 + "/"
+            run("mkdir -p " + final_name)
+            run("tar -xzf /tmp/" + file_name + " -C " + final_name)
+            run("rm /tmp/" + file_name)
+            run("mv " + final_name + "web_static/* " + final_name)
+            run("rm -rf " + final_name + "web_static")
+            run("rm -rf /data/web_static/current")
+            run("ln -s " + final_name + " /data/web_static/current")
+            print("New version deployed!")
+            return True
+        except Exception:
             return False
-
-    return True
